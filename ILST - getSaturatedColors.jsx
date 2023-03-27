@@ -27,10 +27,11 @@ Array.prototype.find = function (callback) {
         if (callback(this[i], i, this)) return this[i];
     return null;
 };
-function getCMYKString(color) {
+function getCMYKString(color, type) {
     try {
         return (
             "CMYK" +
+            type +
             "(" +
             Math.floor(color.cyan) +
             "," +
@@ -72,11 +73,14 @@ function get(type, parent, deep) {
         deep = true;
     }
     var result = [];
-    if (!parent[type]) return [];
+    if (!parent[type]) {
+        return [];
+    }
     for (var i = 0; i < parent[type].length; i++) {
         result.push(parent[type][i]);
-        if (parent[type][i][type] && deep)
+        if (parent[type][i][type] && deep) {
             result = [].concat(result, get(type, parent[type][i], deep));
+        }
     }
     return result;
 }
@@ -87,12 +91,12 @@ function getAllHighSaturationColors() {
         alert('Checking ' + app.activeDocument.pathItems.length + ' items...');
         var list = get('pathItems')
         list.forEach(function (item, index) {
-            if (colorFailedSaturation(item.fillColor) && !colorList.includes(getCMYKString(item.fillColor))) {
-                colorList.push(getCMYKString(item.fillColor));
+            if (colorFailedSaturation(item.fillColor) && !colorList.includes(getCMYKString(item.fillColor, 'Fill'))) {
+                colorList.push(getCMYKString(item.fillColor, 'Fill'));
                 realColors.push(item.fillColor);
             }
-            if (colorFailedSaturation(item.strokeColor) && !colorList.includes(getCMYKString(item.strokeColor))) {
-                colorList.push(getCMYKString(item.strokeColor));
+            if (colorFailedSaturation(item.strokeColor) && !colorList.includes(getCMYKString(item.strokeColor, 'Stroke'))) {
+                colorList.push(getCMYKString(item.strokeColor, 'Stroke'));
                 realColors.push(item.strokeColor);
             }
         })
@@ -110,7 +114,13 @@ function printSwatches(list) {
         newLayer.name = 'Found Colors';
         list.forEach(function (item, index) {
             var shape = app.activeDocument.pathItems.rectangle(150, 0 + (index * 50), 40, 40);
-            shape.fillColor = item
+            var isFill = /fill/i.test(colorList[index]);
+            if (isFill) {
+                shape.fillColor = item
+            } else {
+                shape.strokeColor = item;
+                shape.strokeWidth = 3;
+            }
             shape.move(newLayer, ElementPlacement.PLACEATBEGINNING);
             shape.name = colorList[index];
         });
@@ -122,6 +132,7 @@ function printSwatches(list) {
 
 function colorFailedSaturation(color) {
     try {
+
         if (/nocolor/i.test(color.typename)) return false;
         var fail = false;
         var keys = ['cyan', 'magenta', 'yellow', 'black']
@@ -130,8 +141,11 @@ function colorFailedSaturation(color) {
             var thisColor = color[key];
             if (thisColor > 90)
                 fail = true;
-            if (fail) break
-            else continue;
+            if (fail) {
+                break;
+            } else {
+                continue;
+            }
         }
         return fail;
     } catch (err) {
