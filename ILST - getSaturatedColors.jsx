@@ -167,6 +167,10 @@ function getAllHighSaturationColors(options) {
 }
 
 function printSwatches(list, options) {
+  if (!list.length) {
+    alert("Couldn't find anything");
+    return null;
+  }
   try {
     var newLayer =
       findLayerByName(options.layerName) || app.activeDocument.layers.add();
